@@ -2,6 +2,10 @@
 
 这是 [vulture039 的 Mind map editor](https://github.com/vulture039/obsidian-mindmap-editor) 的个人改造版。原插件实现了 Markdown 与思维导图的双向编辑；这个 fork 主要调整了阅读界面和画布操作。
 
+![修改版界面：左侧 Markdown，右侧可编辑思维导图](docs/minimal-fork-preview.jpg)
+
+截图展示了并排编辑和启用可选极简 CSS 片段后的界面。
+
 ## 这个 fork 改了什么
 
 - **更简洁的外观**：可选 CSS 片段去掉节点边框和填充，只保留文字、分支线与选中时的下划线。
