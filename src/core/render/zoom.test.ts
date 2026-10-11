@@ -8,12 +8,12 @@ describe('zoom', () => {
     expect(clampZoom(4)).toBe(MAX_ZOOM);
   });
 
-  it('matches Graph View wheel scaling when zooming in', () => {
-    expect(wheelZoom(1, -1)).toBeCloseTo(1.0033845907368393);
-    expect(wheelZoom(1, -100)).toBeCloseTo(1.4019828977761009);
+  it('zooms in twice as fast as the original wheel curve', () => {
+    expect(wheelZoom(1, -1)).toBeCloseTo(1.006780635395421);
+    expect(wheelZoom(1, -100)).toBeCloseTo(1.9656, 3);
   });
 
-  it('matches Graph View wheel scaling when zooming out', () => {
-    expect(wheelZoom(1, 100)).toBeCloseTo(0.713275462622442);
+  it('zooms out at the same increased sensitivity', () => {
+    expect(wheelZoom(1, 100)).toBeCloseTo(1 / 1.9656, 3);
   });
 });

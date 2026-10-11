@@ -7,8 +7,9 @@ import {
   ZOOM_STEP,
 } from '../../core/render/zoom';
 
-/** Empty space around the canvas, allowing it to pan beyond every edge. */
-export const PAN_INSET = 2048;
+/** Small amount of room to pan beyond the map's edges. */
+export const PAN_INSET = 160;
+const LEGACY_PAN_INSET = 2048;
 /** Breathing room between a fitted map and the viewport edges. */
 const FIT_INSET = 32;
 
@@ -26,6 +27,12 @@ interface PanStart {
   top: number;
 }
 
+interface PinchStart {
+  distance: number;
+  zoom: number;
+  anchor: ZoomAnchor;
+}
+
 /** Owns zoom, touch gestures, and the scrollable surface around a mind map. */
 export class MapViewport {
   private zoom = 1;
@@ -35,6 +42,12 @@ export class MapViewport {
   private initialized = false;
   private zoomOutActionEl: HTMLElement | null = null;
   private zoomInActionEl: HTMLElement | null = null;
+  private contentWidth = 0;
+  private contentHeight = 0;
+  private insetX = PAN_INSET;
+  private insetY = PAN_INSET;
+  private wheelGesture: 'pan' | 'zoom' | null = null;
+  private lastWheelAt = 0;
   private readonly abort = new AbortController();
 
   constructor(
@@ -81,8 +94,29 @@ export class MapViewport {
 
   restorePosition(state: ViewportState): void {
     this.restore(state.zoom);
-    this.scrollerEl.scrollLeft = state.left;
-    this.scrollerEl.scrollTop = state.top;
+    const maxLeft = Math.max(
+      0,
+      this.scrollerEl.scrollWidth - this.scrollerEl.clientWidth,
+    );
+    const maxTop = Math.max(
+      0,
+      this.scrollerEl.scrollHeight - this.scrollerEl.clientHeight,
+    );
+    const hasScrollBounds =
+      this.scrollerEl.scrollWidth > this.scrollerEl.clientWidth;
+    let left = state.left;
+    let top = state.top;
+
+    // Old releases used a 2048px origin. Move an otherwise unreachable saved
+    // position to the new origin when reopening a map after this change.
+    if (hasScrollBounds && left > maxLeft + 1) {
+      left += this.insetX - LEGACY_PAN_INSET;
+    }
+    if (hasScrollBounds && top > maxTop + 1) {
+      top += this.insetY - LEGACY_PAN_INSET;
+    }
+    this.scrollerEl.scrollLeft = left;
+    this.scrollerEl.scrollTop = top;
   }
 
   bindActions(out: HTMLElement, into: HTMLElement): void {
@@ -108,15 +142,18 @@ export class MapViewport {
   }
 
   sizeSurface(width: number, height: number): void {
-    this.surfaceEl.setCssStyles({
-      width: `${width + PAN_INSET * 2}px`,
-      height: `${height + PAN_INSET * 2}px`,
-    });
+    this.contentWidth = width;
+    this.contentHeight = height;
+    this.refreshSurface();
     if (!this.initialized) {
-      this.scrollerEl.scrollLeft = PAN_INSET;
-      this.scrollerEl.scrollTop = PAN_INSET;
+      this.scrollerEl.scrollLeft = this.insetX;
+      this.scrollerEl.scrollTop = this.insetY;
       this.initialized = true;
     }
+  }
+
+  refreshViewportSize(): void {
+    this.refreshSurface();
   }
 
   /** Returns the transformed map to the middle without changing its zoom. */
@@ -124,10 +161,10 @@ export class MapViewport {
     this.cancelSmoothZoom();
     this.zoomTarget = this.zoom;
     this.scrollerEl.scrollLeft =
-      this.canvasEl.offsetLeft +
+      this.insetX +
       (this.canvasEl.offsetWidth * this.zoom - this.scrollerEl.clientWidth) / 2;
     this.scrollerEl.scrollTop =
-      this.canvasEl.offsetTop +
+      this.insetY +
       (this.canvasEl.offsetHeight * this.zoom - this.scrollerEl.clientHeight) /
         2;
     this.syncActions();
@@ -265,8 +302,9 @@ export class MapViewport {
       viewportX,
       viewportY,
       contentX:
-        (this.scrollerEl.scrollLeft + viewportX - PAN_INSET) / this.zoom,
-      contentY: (this.scrollerEl.scrollTop + viewportY - PAN_INSET) / this.zoom,
+        (this.scrollerEl.scrollLeft + viewportX - this.insetX) / this.zoom,
+      contentY:
+        (this.scrollerEl.scrollTop + viewportY - this.insetY) / this.zoom,
     };
   }
 
@@ -277,18 +315,82 @@ export class MapViewport {
     this.zoom = zoom;
     this.applyZoom();
     this.scrollerEl.scrollLeft =
-      PAN_INSET + anchor.contentX * zoom - anchor.viewportX;
+      this.insetX + anchor.contentX * zoom - anchor.viewportX;
     this.scrollerEl.scrollTop =
-      PAN_INSET + anchor.contentY * zoom - anchor.viewportY;
+      this.insetY + anchor.contentY * zoom - anchor.viewportY;
   }
 
   private applyZoom(): void {
-    // Transform stays on Chromium's compositor; the fixed-size surface owns
-    // scroll bounds, so zooming does not re-layout every node each frame.
+    // Nodes remain absolutely positioned; only the surface's scroll bounds
+    // follow the scale rather than reserving space for 300% at every size.
     this.canvasEl.style.setProperty('transform', `scale(${this.zoom})`);
+    this.refreshSurface();
+  }
+
+  private refreshSurface(): void {
+    if (!this.contentWidth || !this.contentHeight) {
+      return;
+    }
+    const scaledWidth = this.contentWidth * this.zoom;
+    const scaledHeight = this.contentHeight * this.zoom;
+    const insetX = Math.max(
+      PAN_INSET,
+      (this.scrollerEl.clientWidth - scaledWidth) / 2 + PAN_INSET,
+    );
+    const insetY = Math.max(
+      PAN_INSET,
+      (this.scrollerEl.clientHeight - scaledHeight) / 2 + PAN_INSET,
+    );
+    const deltaX = insetX - this.insetX;
+    const deltaY = insetY - this.insetY;
+
+    this.insetX = insetX;
+    this.insetY = insetY;
+    this.canvasEl.setCssStyles({ left: `${insetX}px`, top: `${insetY}px` });
+    this.surfaceEl.setCssStyles({
+      width: `${scaledWidth + insetX * 2}px`,
+      height: `${scaledHeight + insetY * 2}px`,
+    });
+    if (this.initialized) {
+      this.scrollerEl.scrollLeft += deltaX;
+      this.scrollerEl.scrollTop += deltaY;
+    }
   }
 
   private onWheel(event: WheelEvent): void {
+    if (!event.deltaX && !event.deltaY) {
+      return;
+    }
+    const now = this.scrollerEl.win.performance.now();
+    const forcedZoom = event.ctrlKey || event.metaKey;
+
+    if (!forcedZoom && event.deltaX !== 0) {
+      this.wheelGesture = 'pan';
+    } else if (
+      !forcedZoom &&
+      (now - this.lastWheelAt > 220 || !this.wheelGesture)
+    ) {
+      const coarseWheel =
+        event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL ||
+        (event.deltaX === 0 &&
+          Math.abs(event.deltaY) >= 80 &&
+          (Math.abs(event.deltaY % 100) < 0.001 ||
+            Math.abs(event.deltaY % 120) < 0.001));
+
+      this.wheelGesture = coarseWheel ? 'zoom' : 'pan';
+    }
+    if (!forcedZoom) {
+      this.lastWheelAt = now;
+    }
+    if (!forcedZoom && this.wheelGesture === 'pan') {
+      this.cancelSmoothZoom();
+      this.zoomTarget = this.zoom;
+      event.preventDefault();
+      this.scrollerEl.scrollLeft += event.deltaX;
+      this.scrollerEl.scrollTop += event.deltaY;
+
+      return;
+    }
     if (!event.deltaY) {
       return;
     }
@@ -300,10 +402,10 @@ export class MapViewport {
     );
   }
 
-  /** One-finger background pan and two-finger, midpoint-anchored zoom. */
+  /** One-finger background pan; two fingers can slide or pinch the canvas. */
   private registerTouchGestures(): void {
     let pan: PanStart | null = null;
-    let pinch: { distance: number; zoom: number } | null = null;
+    let pinch: PinchStart | null = null;
     const distance = (touches: TouchList): number =>
       Math.hypot(
         touches[0]!.clientX - touches[1]!.clientX,
@@ -321,7 +423,17 @@ export class MapViewport {
           }
           this.cancelSmoothZoom();
           this.zoomTarget = this.zoom;
-          pinch = { distance: startDistance, zoom: this.zoom };
+          const first = event.touches[0]!;
+          const second = event.touches[1]!;
+
+          pinch = {
+            distance: startDistance,
+            zoom: this.zoom,
+            anchor: this.captureZoomAnchor(
+              (first.clientX + second.clientX) / 2,
+              (first.clientY + second.clientY) / 2,
+            ),
+          };
           pan = null;
           event.preventDefault();
         } else if (
@@ -341,13 +453,22 @@ export class MapViewport {
         if (event.touches.length === 2 && pinch) {
           const first = event.touches[0]!;
           const second = event.touches[1]!;
+          const box = this.scrollerEl.getBoundingClientRect();
+          const viewportX = (first.clientX + second.clientX) / 2 - box.left;
+          const viewportY = (first.clientY + second.clientY) / 2 - box.top;
+          const zoom = clampZoom(
+            pinch.zoom * (distance(event.touches) / pinch.distance),
+          );
 
           event.preventDefault();
-          this.setZoom(
-            pinch.zoom * (distance(event.touches) / pinch.distance),
-            (first.clientX + second.clientX) / 2,
-            (first.clientY + second.clientY) / 2,
-          );
+          this.zoom = zoom;
+          this.zoomTarget = zoom;
+          this.applyZoom();
+          this.scrollerEl.scrollLeft =
+            this.insetX + pinch.anchor.contentX * zoom - viewportX;
+          this.scrollerEl.scrollTop =
+            this.insetY + pinch.anchor.contentY * zoom - viewportY;
+          this.syncActions();
         } else if (event.touches.length === 1 && pan) {
           const touch = event.touches[0]!;
 

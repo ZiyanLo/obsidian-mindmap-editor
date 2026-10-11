@@ -41,7 +41,7 @@ import {
   readEditorFolds,
 } from '../markdown/folds';
 import { LaidNode, layoutTree, makeLaid } from '../../core/render/layout';
-import { clampZoom, MAX_ZOOM } from '../../core/render/zoom';
+import { clampZoom } from '../../core/render/zoom';
 import { mirrorCursorInBody } from '../../core/render/mirror-cursor';
 import {
   NodeColor,
@@ -2250,6 +2250,7 @@ export class MindmapView extends ItemView {
    * render() — the debounce would leave the stale map up for its delay.
    */
   onResize(): void {
+    this.viewport.refreshViewportSize();
     if (this.renderQueued && this.contentEl.offsetHeight > 0) {
       void this.render();
     }
@@ -2387,6 +2388,8 @@ export class MindmapView extends ItemView {
     const restoreViewport = this.viewport.isInitialized;
     const scrollLeft = this.scrollerEl.scrollLeft;
     const scrollTop = this.scrollerEl.scrollTop;
+    const canvasLeft = this.canvasEl.offsetLeft;
+    const canvasTop = this.canvasEl.offsetTop;
 
     const canvasParent = this.canvasEl.parentElement;
 
@@ -2443,8 +2446,10 @@ export class MindmapView extends ItemView {
     this.layoutBuildSeq = null;
     this.finishRenderStaging();
     if (restoreViewport) {
-      this.scrollerEl.scrollLeft = scrollLeft;
-      this.scrollerEl.scrollTop = scrollTop;
+      this.scrollerEl.scrollLeft =
+        scrollLeft + this.canvasEl.offsetLeft - canvasLeft;
+      this.scrollerEl.scrollTop =
+        scrollTop + this.canvasEl.offsetTop - canvasTop;
     }
     this.viewportReady = true;
     this.schedulePendingReveal();
@@ -3147,7 +3152,7 @@ export class MindmapView extends ItemView {
     this.applyPositions(this.laidRoot);
     this.drawEdges(svg, this.laidRoot, this.addCollapseToggles(this.laidRoot));
     this.canvasEl.setCssStyles({ width: `${width}px`, height: `${height}px` });
-    this.viewport.sizeSurface(width * MAX_ZOOM, height * MAX_ZOOM);
+    this.viewport.sizeSurface(width, height);
     svg.setAttribute('width', String(width));
     svg.setAttribute('height', String(height));
   }

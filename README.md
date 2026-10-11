@@ -1,3 +1,29 @@
+# Mind map editor · Minimal fork
+
+这是 [vulture039 的 Mind map editor](https://github.com/vulture039/obsidian-mindmap-editor) 的个人改造版。原插件实现了 Markdown 与思维导图的双向编辑；这个 fork 主要调整了阅读界面和画布操作。
+
+## 这个 fork 改了什么
+
+- **更简洁的外观**：可选 CSS 片段去掉节点边框和填充，只保留文字、分支线与选中时的下划线。
+- **更长的单行**：节点最大宽度从 300px 增至 520px，减少中文长句换行。
+- **触控板操作**：双指滑动可同时横向和纵向移动画布，捏合缩放；常规滚轮缩放更快。`⌘/Ctrl + 滚轮`可强制缩放。
+- **适度的画布边界**：缩小空白滚动范围，缩放时仍保持光标附近的内容位置。
+
+Markdown 文件仍是唯一的数据源。你可以在编辑器、导图或其他本地工具（包括 AI）中修改同一份笔记。
+
+## 安装这个 fork
+
+1. 在 Obsidian 中安装并启用原版 **Mind map editor**。
+2. 下载此仓库，在项目目录运行 `npm ci` 和 `npm run build`。
+3. 把生成的 `main.js`、`styles.css` 和仓库中的 `manifest.json` 复制到笔记库的 `.obsidian/plugins/mindmap-editor/`，然后重新加载插件。
+4. 如需极简外观，把 [`extras/mind-map-editor-minimal.css`](extras/mind-map-editor-minimal.css) 复制到笔记库的 `.obsidian/snippets/`，并在 **设置 → 外观 → CSS 代码片段** 中启用。
+
+Obsidian 中手动更新原插件会覆盖此 fork 的程序文件；更新前请先备份。不同设备的滚轮事件可能略有差异，`⌘/Ctrl + 滚轮`始终用于缩放。
+
+本项目沿用原项目的 [MIT 许可证](LICENSE)。感谢原作者 [vulture039](https://github.com/vulture039) 的工作。
+
+---
+
 # Mind map editor
 
 [![Obsidian downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=483699&label=downloads&query=%24%5B%22mindmap-editor%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json)](https://obsidian.md/plugins?id=mindmap-editor)

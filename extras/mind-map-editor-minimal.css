@@ -1,0 +1,103 @@
+/* Minimal styling for Mind map editor 1.9.0 in Obsidian. */
+/* Match the base palette inside node styles and edge strokes so descendants
+   and connectors keep one color throughout each main branch. */
+.mindmap-view .mindmap-node[style*='0.131 244'] {
+  --branch-color: oklch(62% 0.131 244) !important;
+}
+.mindmap-view .mindmap-edges path[stroke*='0.131 244'] {
+  stroke: oklch(62% 0.131 244) !important;
+}
+
+.mindmap-view .mindmap-node[style*='0.17 47.5'] {
+  --branch-color: oklch(64% 0.17 47.5) !important;
+}
+.mindmap-view .mindmap-edges path[stroke*='0.17 47.5'] {
+  stroke: oklch(64% 0.17 47.5) !important;
+}
+
+.mindmap-view .mindmap-node[style*='0.13 165.5'] {
+  --branch-color: oklch(64% 0.13 165.5) !important;
+}
+.mindmap-view .mindmap-edges path[stroke*='0.13 165.5'] {
+  stroke: oklch(64% 0.13 165.5) !important;
+}
+
+.mindmap-view .mindmap-node[style*='0.118 346.3'] {
+  --branch-color: oklch(67.9% 0.118 346.3) !important;
+}
+.mindmap-view .mindmap-edges path[stroke*='0.118 346.3'] {
+  stroke: oklch(67.9% 0.118 346.3) !important;
+}
+
+.mindmap-view .mindmap-node[style*='0.172 105'] {
+  --branch-color: oklch(78% 0.172 105) !important;
+}
+.mindmap-view .mindmap-edges path[stroke*='0.172 105'] {
+  stroke: oklch(78% 0.172 105) !important;
+}
+
+/* Keep the measured border width; only remove its visible box. */
+.mindmap-view .mindmap-node,
+.mindmap-view .mindmap-node.mindmap-node-root {
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* The plugin gives the root a 4px double border. Make its active underline
+   a single thin line like the other nodes. */
+.mindmap-view .mindmap-node.mindmap-node-root {
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+/* A bottom border gives a true underline. A downward box shadow also paints
+   the left and right edges, which looks like a three-sided frame. */
+.mindmap-view
+  .mindmap-canvas:not(.is-drag-active)
+  .mindmap-node:not(.is-selected):hover,
+.mindmap-view .mindmap-node.is-selected,
+.mindmap-view .mindmap-node:focus-within {
+  border-bottom-color: var(
+    --branch-color,
+    var(--interactive-accent)
+  ) !important;
+  box-shadow: none !important;
+}
+
+.mindmap-view .mindmap-node.is-drop-target {
+  border-color: var(--interactive-accent) !important;
+  border-style: dashed;
+}
+
+/* Editable body text and floating actions should not regain a frame. */
+.mindmap-view .mindmap-node-body {
+  border-color: transparent !important;
+  border-bottom-color: var(--branch-color, var(--text-muted)) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.mindmap-view .mindmap-node-actions {
+  border-color: transparent !important;
+  background: var(--background-primary) !important;
+  box-shadow: none !important;
+}
+.mindmap-view .mindmap-node-body-line:not(.is-cursor-line):hover {
+  background: transparent !important;
+}
+
+.mindmap-view .mindmap-collapse {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+/* The plugin places a "−" over each branch connector. With the handle box
+   removed, that glyph looks like an unrelated white line. Reveal it on hover;
+   keep "+" visible when a branch is collapsed. */
+.mindmap-view .mindmap-collapse:not(.is-collapsed) {
+  color: transparent !important;
+}
+.mindmap-view .mindmap-collapse:not(.is-collapsed):hover {
+  color: var(--branch-color, var(--text-muted)) !important;
+}
